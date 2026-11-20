@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartFin — Análise de transações</title>
+  <link rel="icon" type="image/x-icon" href="assets/icone.ico">
+  <script>
+    (function () {
+      var salvo = localStorage.getItem("smartfin:tema");
+      if (salvo === "dark" || salvo === "light") {
+        document.documentElement.dataset.theme = salvo;
+      } else if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+        document.documentElement.dataset.theme = "light";
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="pular-conteudo" href="#conteudo-principal">Pular para o conteúdo principal</a>
+
+  <div class="app">
+    <aside class="barra-lateral">
+      <div class="marca">
+        <span class="marca-icone" aria-hidden="true">
+          <img src="./assets/icone.ico" alt="SF">
+        </span>
+        <span class="marca-texto">SmartFin</span>
+      </div>
+
+      <nav aria-label="Navegação principal">
+        <div class="lista-abas" role="tablist" aria-orientation="vertical">
+          <button class="aba" role="tab" id="aba-dashboard" data-aba="dashboard" data-titulo="Dashboard"
+                  aria-controls="painel-dashboard" aria-selected="true" tabindex="0">
+            <svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9zm0 7h6v-5H4v5zm10 0h6V11h-6v9zm0-16v5h6V4h-6z"/></svg>
+            Dashboard
+          </button>
+          <button class="aba" role="tab" id="aba-registros" data-aba="registros" data-titulo="Registros"
+                  aria-controls="painel-registros" aria-selected="false" tabindex="-1">
+            <svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v2H4V5zm0 6h16v2H4v-2zm0 6h10v2H4v-2z"/></svg>
+            Registros
+          </button>
+          <button class="aba" role="tab" id="aba-configuracoes" data-aba="configuracoes" data-titulo="Configurações"
+                  aria-controls="painel-configuracoes" aria-selected="false" tabindex="-1">
+            <svg class="icone" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9 4a7 7 0 01-.1 1.2l2 1.6-2 3.4-2.4-1a7.6 7.6 0 01-2 1.2l-.4 2.6h-4l-.4-2.6a7.6 7.6 0 01-2-1.2l-2.4 1-2-3.4 2-1.6A7 7 0 013 12c0-.4 0-.8.1-1.2l-2-1.6 2-3.4 2.4 1a7.6 7.6 0 012-1.2L7.9 3h4l.4 2.6a7.6 7.6 0 012 1.2l2.4-1 2 3.4-2 1.6c.1.4.1.8.1 1.2z"/></svg>
+            Configurações
+          </button>
+        </div>
+      </nav>
+
+      <div class="rodape-lateral">
+        <p id="status-app" class="status-app" role="status" aria-live="polite">Pronto</p>
+      </div>
+    </aside>
+
+    <main id="conteudo-principal" class="conteudo" tabindex="-1">
+      <header class="cabecalho">
+        <h1 id="titulo-pagina">Dashboard</h1>
+        <p class="subtitulo">Análise de gastos das suas transações</p>
+      </header>
+
+      <section id="painel-dashboard" class="painel" role="tabpanel" aria-labelledby="aba-dashboard">
+        <div class="barra-filtros" role="group" aria-label="Filtros do dashboard">
+          <div class="campo">
+            <label for="filtro-estado">Visão</label>
+            <select id="filtro-estado">
+              <option value="tudo">Tudo</option>
+              <option value="categoria">Categoria</option>
+              <option value="mes">Mês</option>
+              <option value="apelido">Apelido</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label for="filtro-categoria">Categoria</label>
+            <select id="filtro-categoria"><option value="">Todas</option></select>
+          </div>
+          <div class="campo">
+            <label for="filtro-mes">Mês</label>
+            <select id="filtro-mes"><option value="">Todos</option></select>
+          </div>
+          <details class="filtros-extras">
+            <summary>Filtros adicionais</summary>
+            <div class="campo">
+              <label for="filtro-apelido">Apelido</label>
+              <select id="filtro-apelido"><option value="">Todos</option></select>
+            </div>
+          </details>
+          <button type="button" id="limpar-filtros" class="botao botao-secundario" aria-label="Remover todos os filtros aplicados">Limpar filtros</button>
+        </div>
+        <p id="estado-filtros" class="sr-only" aria-live="polite"></p>
+
+        <p id="resumo-dashboard" class="resumo-dashboard" hidden></p>
+        <div id="estado-vazio" class="estado-vazio" hidden>
+          <h2>Sem dados para exibir</h2>
+          <p>Importe um arquivo CSV na aba Registros para começar a análise.</p>
+        </div>
+
+        <div id="cartoes" class="grade-cartoes"></div>
+
+        <div id="grade-graficos" class="grade-graficos">
+          <section class="cartao grafico" aria-labelledby="titulo-barra">
+            <h2 id="titulo-barra">Gastos por mês</h2>
+            <div class="grafico-area">
+              <canvas id="grafico-barra" role="img" aria-labelledby="titulo-barra" aria-describedby="descricao-barra"></canvas>
+            </div>
+            <p id="descricao-barra" class="sr-only"></p>
+          </section>
+          <section class="cartao grafico" aria-labelledby="titulo-pizza">
+            <h2 id="titulo-pizza">Gastos por categoria</h2>
+            <div class="grafico-area">
+              <canvas id="grafico-pizza" role="img" aria-labelledby="titulo-pizza" aria-describedby="descricao-pizza"></canvas>
+            </div>
+            <p id="descricao-pizza" class="sr-only"></p>
+          </section>
+        </div>
+
+        <section id="secao-topo" class="cartao" aria-labelledby="titulo-topo">
+          <div class="cartao-cabecalho">
+            <h2 id="titulo-topo">Maiores gastos</h2>
+            <button type="button" id="ver-todos" class="botao botao-secundario">Ver todos</button>
+          </div>
+          <ol id="topo-gastos" class="lista-topo"></ol>
+        </section>
+      </section>
+
+      <section id="painel-registros" class="painel" role="tabpanel" aria-labelledby="aba-registros" hidden>
+        <section class="cartao area-upload" aria-labelledby="titulo-upload">
+          <h2 id="titulo-upload">Importar transações</h2>
+          <p class="texto-secundario">Selecione um CSV de transações do Nubank. Transações já classificadas são reconhecidas automaticamente.</p>
+          <button type="button" id="botao-upload" class="botao botao-primario">Selecionar arquivo para upload</button>
+          <p id="status-upload" class="status-upload" role="status" aria-live="polite"></p>
+        </section>
+
+        <form id="form-filtros-registros" class="cartao barra-filtros barra-filtros--registros" aria-label="Filtros de registros">
+          <div class="campo">
+            <label for="busca-nome">Nome</label>
+            <input type="search" id="busca-nome" name="nome">
+          </div>
+          <div class="campo campo-valor">
+            <label for="busca-valor-min">Valor mínimo</label>
+            <input type="number" id="busca-valor-min" name="valor_min" step="0.01">
+          </div>
+          <div class="campo campo-valor">
+            <label for="busca-valor-max">Valor máximo</label>
+            <input type="number" id="busca-valor-max" name="valor_max" step="0.01">
+          </div>
+          <div class="campo">
+            <label for="busca-apelido">Apelido</label>
+            <input type="search" id="busca-apelido" name="apelido">
+          </div>
+          <div class="campo">
+            <label for="busca-categoria">Categoria</label>
+            <select id="busca-categoria" name="id_categoria"><option value="">Todas</option></select>
+          </div>
+          <div class="campo">
+            <label for="busca-data-inicio">Período de</label>
+            <input type="date" id="busca-data-inicio" name="data_inicio">
+          </div>
+          <div class="campo">
+            <label for="busca-data-fim">até</label>
+            <input type="date" id="busca-data-fim" name="data_fim">
+          </div>
+          <div class="acoes-filtros">
+            <button type="submit" class="botao botao-primario">Filtrar</button>
+            <button type="reset" id="limpar-filtros-registros" class="botao botao-secundario">Limpar</button>
+          </div>
+        </form>
+
+        <section class="cartao" aria-labelledby="titulo-tabela">
+          <div class="cartao-cabecalho">
+            <h2 id="titulo-tabela">Registros</h2>
+            <button type="button" id="botao-novo-registro" class="botao botao-primario">Novo registro</button>
+          </div>
+          <p id="status-registros" class="status-tabela" role="status" aria-live="polite"></p>
+          <div class="tabela-rolagem">
+            <table>
+              <caption class="sr-only">Transações cadastradas, com data, nome, apelido, categoria, valor e ações.</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Data</th>
+                  <th scope="col">Nome</th>
+                  <th scope="col">Apelido</th>
+                  <th scope="col">Categoria</th>
+                  <th scope="col" class="alinhar-direita">Valor</th>
+                  <th scope="col">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="corpo-tabela"></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="painel-configuracoes" class="painel" role="tabpanel" aria-labelledby="aba-configuracoes" hidden>
+        <section class="cartao" aria-labelledby="titulo-tema">
+          <h2 id="titulo-tema">Aparência</h2>
+          <fieldset class="grupo-tema">
+            <legend>Selecione o tema da aplicação</legend>
+            <label class="opcao-tema">
+              <input type="radio" name="tema" value="dark">
+              Tema escuro (preto com azul)
+            </label>
+            <label class="opcao-tema">
+              <input type="radio" name="tema" value="light">
+              Tema claro (branco com azul)
+            </label>
+          </fieldset>
+          <p class="texto-secundario">Tema atual: <span id="rotulo-tema-atual">Escuro</span></p>
+        </section>
+
+        <section class="cartao zona-perigo" aria-labelledby="titulo-perigo">
+          <h2 id="titulo-perigo">Zona de perigo</h2>
+          <p>Excluir todos os dados apaga permanentemente os registros e categorias personalizadas. Esta ação não pode ser desfeita.</p>
+          <button type="button" id="botao-apagar-dados" class="botao botao-perigo" aria-label="Excluir permanentemente todos os dados">Excluir todos os dados</button>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="dialogo-registro" aria-labelledby="titulo-dialogo-registro">
+    <form id="form-registro" class="formulario" novalidate>
+      <h2 id="titulo-dialogo-registro">Novo registro</h2>
+      <p class="texto-secundario">Campos com * são obrigatórios.</p>
+      <div id="erro-registro" class="mensagem-erro" role="alert" hidden></div>
+      <fieldset>
+        <legend>Dados da transação</legend>
+        <div class="campo">
+          <label for="registro-nome">Nome *</label>
+          <input type="text" id="registro-nome" name="nome" required aria-describedby="ajuda-registro-nome">
+          <p id="ajuda-registro-nome" class="ajuda">Estabelecimento, pessoa ou maquininha.</p>
+        </div>
+        <div class="campo">
+          <label for="registro-valor">Valor (R$) *</label>
+          <input type="number" id="registro-valor" name="valor" step="0.01" required>
+        </div>
+        <div class="campo">
+          <label for="registro-data">Data *</label>
+          <input type="date" id="registro-data" name="data" required>
+        </div>
+        <div class="campo">
+          <label for="registro-categoria">Categoria *</label>
+          <select id="registro-categoria" name="id_categoria" required></select>
+        </div>
+        <div class="campo">
+          <label for="registro-apelido">Apelido</label>
+          <input type="text" id="registro-apelido" name="apelido">
+        </div>
+      </fieldset>
+      <div class="acoes-formulario">
+        <button type="button" id="cancelar-registro" class="botao botao-secundario">Cancelar</button>
+        <button type="submit" id="salvar-registro" class="botao botao-primario">Salvar registro</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-excluir" aria-labelledby="titulo-dialogo-excluir">
+    <h2 id="titulo-dialogo-excluir">Excluir registro</h2>
+    <p id="texto-dialogo-excluir">Deseja excluir este registro?</p>
+    <div class="acoes-formulario">
+      <button type="button" id="cancelar-excluir" class="botao botao-secundario">Cancelar</button>
+      <button type="button" id="confirmar-excluir" class="botao botao-perigo">Excluir registro</button>
+    </div>
+  </dialog>
+
+  <dialog id="dialogo-classificacao" aria-labelledby="titulo-classificacao" class="dialogo-largo">
+    <form method="dialog" class="formulario" id="form-classificacao">
+      <h2 id="titulo-classificacao">Classificar transações</h2>
+      <p id="progresso-classificacao" class="texto-secundario"></p>
+      <div class="classificacao-nome">
+        <p class="rotulo-classificacao">Nome identificado</p>
+        <p id="nome-classificacao" class="destaque"></p>
+        <p id="ocorrencias-classificacao" class="texto-secundario"></p>
+      </div>
+      <div class="campo">
+        <p class="rotulo-classificacao">Exemplos de descrição</p>
+        <ul id="exemplos-classificacao" class="lista-exemplos"></ul>
+      </div>
+      <div class="campo">
+        <label for="classificacao-categoria">Categoria *</label>
+        <select id="classificacao-categoria" required></select>
+      </div>
+      <div class="campo" id="campo-nova-categoria" hidden>
+        <label for="classificacao-nova-categoria">Nome da nova categoria *</label>
+        <input type="text" id="classificacao-nova-categoria">
+      </div>
+      <div class="campo">
+        <label for="classificacao-apelido">Apelido</label>
+        <input type="text" id="classificacao-apelido">
+      </div>
+      <div id="erro-classificacao" class="mensagem-erro" role="alert" hidden></div>
+      <div class="acoes-formulario">
+        <button type="button" id="classificacao-voltar" class="botao botao-secundario">Voltar</button>
+        <button type="button" id="classificacao-proximo" class="botao botao-primario">Próximo</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dialogo-todos" aria-labelledby="titulo-dialogo-todos" class="dialogo-largo">
+    <h2 id="titulo-dialogo-todos">Todos os gastos</h2>
+    <ol id="lista-todos" class="lista-topo lista-topo--completa"></ol>
+    <div class="acoes-formulario">
+      <button type="button" id="fechar-todos" class="botao botao-secundario">Fechar</button>
+    </div>
+  </dialog>
+
+  <dialog id="dialogo-apagar" role="alertdialog" aria-labelledby="titulo-dialogo-apagar" aria-describedby="texto-dialogo-apagar">
+    <h2 id="titulo-dialogo-apagar">Excluir todos os dados</h2>
+    <p id="texto-dialogo-apagar">Esta ação não pode ser desfeita. Todos os registros e categorias personalizadas serão apagados.</p>
+    <div class="acoes-formulario">
+      <button type="button" id="cancelar-apagar" class="botao botao-secundario">Cancelar</button>
+      <button type="button" id="confirmar-apagar" class="botao botao-perigo">Excluir permanentemente</button>
+    </div>
+  </dialog>
+
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="false"></div>
+
+  <script src="vendor/chart.umd.js"></script>
+  <script src="js/tema.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+  <script src="js/registros.js"></script>
+  <script src="js/config.js"></script>
+</body>
+</html>
